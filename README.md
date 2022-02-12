@@ -12,7 +12,7 @@ Before each week's meeting, please create an **issue**, clearly stating your nam
 - Next steps to research
 
 ## Data
-**CorrectMembers** contains raw data for the most reliable (non-webscraped) set of tickers that we have. 
+**CombinedData** contains raw data for the most reliable (non-webscraped) set of tickers that we have. 
 - These are merged into a dataframe **df_Merge.pkl**, which can be used as a basis for research. See below for resources that explain the column names.
 - **CRSPMembers_TomLiu.ipynb** will also take you through the data manipulation process.
 - Access this sheet to understand the factors/data: https://docs.google.com/spreadsheets/d/1yJPikZnZ7No92ojZG1gAw1ay8oH96o6iYfAJc1HHYbI/edit?usp=sharing
