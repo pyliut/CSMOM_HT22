@@ -76,10 +76,6 @@ for tk in tickers:
 predictionDic[tickers[0]].plot()
 returnDic[tickers[0]].plot()
 
-dic = {'col1': [0, 1], 'col2': pd.Series([2, 3], index=[2, 3])}
-a = pd.DataFrame(data = dic)
-a = a.reindex()
-print(a)
 
 
 
