@@ -11,11 +11,7 @@ import pandas as pd
 import sys
 from sklearn.linear_model import LinearRegression
 from xgboost import XGBRegressor
-
-
-
-
-
+import numpy as np
 
 yrStep = 5 #Number of years in each prediction period
 df_NN = pd.read_csv("df_NeuralNetworkFeatures.csv")
@@ -29,11 +25,6 @@ for i in range(2000, 2022, yrStep):
       dates[len(dates)-1].append(str(j)+"-"+f"{k:02}") #Adds them to one element
 print("Dates in prediction periods: " + str(dates))
 
-
-
-
-
-
 df_split = [] #df_split will be an array of dataframes, each dataframe will contain the data from a [yrstep]-year period
 for dt in dates:
   df_split.append(df_NN[df_NN["month"].isin(dt)].set_index("month")) 
@@ -43,12 +34,6 @@ for i in range(len(dates)):
     df_train.append(None)
   else:
     df_train.append(pd.concat([df_split[j] for j in range(len(df_split)) if j < i]).drop("PERMNO", 1))
-
-
-
-
-
-
 
 def getPreds(model, train_data, test_data): #Gets predictions for one [yrStep]-year period
   y_test = train_data["pred_target"]
@@ -66,17 +51,48 @@ def predict(model, train, test): #Loops through each [yrStep]-year period and ge
   preds = []
   for i in range(1, len(train)):
     preds.append(getPreds(model, train[i], test[i]))  
-  return pd.concat(preds).set_index("month")
+  return pd.concat(preds)
 
-df_preds = predict(XGBRegressor(), df_train, df_split)
-
-
-
-
+df_preds = predict(LinearRegression(), df_train, df_split)
 
 def plot(pn, df_p): #Plots the predicted and actual returns for a PERMNO pn, where df_p is dataframe of predictions
-  df_predicted = df_preds[df_p["PERMNO"] == pn].rename(columns = {"pred_target":"Predicted Returns"})["Predicted Returns"]
+  df_predicted = df_p[df_p["PERMNO"] == pn].set_index("month").rename(columns = {"pred_target":"Predicted Returns"})["Predicted Returns"]
   df_measured = df_NN[df_NN["PERMNO"] == pn].set_index("month").rename(columns = {"pred_target":"Actual Returns"})["Actual Returns"]
   df_combined = pd.concat([df_predicted, df_measured], axis = 1, sort = True)
   df_combined.plot()
 plot(permnos[2], df_preds)
+
+#df_preds = df_preds.set_index("month")
+def only_long_weighting(df_p, num_long):
+  strat_dic = {"month":[], "Mean Total Returns":[]}
+  months = list(df_p.index.unique())
+  for dt in months:
+    df_pred_dt = df_p[df_p.index == dt]
+    df_ret_dt = df_NN[df_NN["month"] == dt]
+    if len(df_pred_dt) >= num_long:
+      preds_zipped = [i for i in zip(list(df_pred_dt["pred_target"]), list(df_pred_dt["PERMNO"]))]
+      preds_zipped.sort(
+          )#reverse=True)
+      rets_zipped = [i for i in zip(list(df_ret_dt["pred_target"]), list(df_ret_dt["PERMNO"]))]
+      rets_dic = {i[1]:i[0] for i in rets_zipped}
+      longs = [preds_zipped[i][1] for i in range(num_long)]
+      mean_return = sum([rets_dic[i] for i in longs])/len(rets_dic)
+      strat_dic["month"].append(dt)
+      strat_dic["Mean Total Returns"].append(mean_return)
+  strat_dic["Mean Total Returns"] = (1+np.array(strat_dic["Mean Total Returns"])).cumprod()
+  return pd.DataFrame(strat_dic).set_index("month")
+def baseline(df_p):
+  strat_dic = {"month":[], "Mean Total Returns":[]}
+  months = list(df_p.index.unique())
+  for dt in months:
+    df_pred_dt = df_p[df_p.index == dt]
+    df_ret_dt = df_NN[df_NN["month"] == dt]
+    if len(df_pred_dt) > 0:
+      rets = list(df_ret_dt["pred_target"])
+      mean_return = sum(rets)/len(rets)
+      strat_dic["month"].append(dt)
+      strat_dic["Mean Total Returns"].append(mean_return)
+  strat_dic["Mean Total Returns"] = (1+np.array(strat_dic["Mean Total Returns"])).cumprod()
+  return pd.DataFrame(strat_dic).set_index("month")
+only_long_weighting(df_preds, 200).plot()
+baseline(df_preds).plot()
